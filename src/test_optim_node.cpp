@@ -57,6 +57,10 @@ TebConfig config;
 boost::shared_ptr< dynamic_reconfigure::Server<TebLocalPlannerReconfigureConfig> > dynamic_recfg;
 ros::Subscriber custom_obst_sub;
 ros::Subscriber via_points_sub;
+ros::Subscriber l3_goal_sub;
+ros::Subscriber l3_odom_sub;
+geometry_msgs::Pose l3_origin_pose;
+geometry_msgs::Pose l3_goal_pose;
 ros::Subscriber clicked_points_sub;
 std::vector<ros::Subscriber> obst_vel_subs;
 unsigned int no_fixed_obstacles;
@@ -70,6 +74,8 @@ void CreateInteractiveMarker(const double& init_x, const double& init_y, unsigne
 void CB_obstacle_marker(const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback);
 void CB_clicked_points(const geometry_msgs::PointStampedConstPtr& point_msg);
 void CB_via_points(const nav_msgs::Path::ConstPtr& via_points_msg);
+void CB_l3_goal(const geometry_msgs::PoseStampedConstPtr& pose_msg);
+void CB_l3_odom(const nav_msgs::Odometry::ConstPtr& odom_msg);
 void CB_setObstacleVelocity(const geometry_msgs::TwistConstPtr& twist_msg, const unsigned int id);
 
 
@@ -78,34 +84,54 @@ int main( int argc, char** argv )
 {
   ros::init(argc, argv, "test_optim_node");
   ros::NodeHandle n("~");
- 
-  
+
+
   // load ros parameters from node handle
   config.loadRosParamFromNodeHandle(n);
- 
+
   ros::Timer cycle_timer = n.createTimer(ros::Duration(0.025), CB_mainCycle);
   ros::Timer publish_timer = n.createTimer(ros::Duration(0.1), CB_publishCycle);
-  
+
   // setup dynamic reconfigure
   dynamic_recfg = boost::make_shared< dynamic_reconfigure::Server<TebLocalPlannerReconfigureConfig> >(n);
   dynamic_reconfigure::Server<TebLocalPlannerReconfigureConfig>::CallbackType cb = boost::bind(CB_reconfigure, _1, _2);
   dynamic_recfg->setCallback(cb);
-  
+
   // setup callback for custom obstacles
   custom_obst_sub = n.subscribe("obstacles", 1, CB_customObstacle);
-  
+
   // setup callback for clicked points (in rviz) that are considered as via-points
   clicked_points_sub = n.subscribe("/clicked_point", 5, CB_clicked_points);
-  
+
   // setup callback for via-points (callback overwrites previously set via-points)
   via_points_sub = n.subscribe("via_points", 1, CB_via_points);
+
+  // Louis:
+  // setup callback for goal and odom
+  l3_goal_pose.position.x = 25.0f;
+  l3_goal_pose.position.y = 0.0f;
+  l3_goal_pose.position.z = 0.0f;
+  l3_goal_pose.orientation.x = 0.0f;
+  l3_goal_pose.orientation.y = 0.0f;
+  l3_goal_pose.orientation.z = 0.0f;
+  l3_goal_pose.orientation.w = 1.0f;
+  l3_origin_pose.position.x = 0.0f;
+  l3_origin_pose.position.y = 0.0f;
+  l3_origin_pose.position.z = 0.0f;
+  l3_origin_pose.orientation.x = 0.0f;
+  l3_origin_pose.orientation.y = 0.0f;
+  l3_origin_pose.orientation.z = 0.0f;
+  l3_origin_pose.orientation.w = 1.0f;
+  l3_goal_sub = n.subscribe("l3_goal_odom_frame", 1, CB_l3_goal);
+  l3_odom_sub = n.subscribe("l3_odom", 1, CB_l3_odom);
 
   // interactive marker server for simulated dynamic obstacles
   interactive_markers::InteractiveMarkerServer marker_server("marker_obstacles");
 
-  obst_vector.push_back( boost::make_shared<PointObstacle>(-3,1) );
-  obst_vector.push_back( boost::make_shared<PointObstacle>(6,2) );
-  obst_vector.push_back( boost::make_shared<PointObstacle>(0,0.1) );
+  // can't delete these, but can move them far enough away
+  obst_vector.push_back( boost::make_shared<PointObstacle>(-50,1) );
+  obst_vector.push_back( boost::make_shared<PointObstacle>(-50,-1) );
+  // obst_vector.push_back( boost::make_shared<PointObstacle>(0,0.1) );
 //  obst_vector.push_back( boost::make_shared<LineObstacle>(1,1.5,1,-1.5) ); //90 deg
 //  obst_vector.push_back( boost::make_shared<LineObstacle>(1,0,-1,0) ); //180 deg
 //  obst_vector.push_back( boost::make_shared<PointObstacle>(-1.5,-0.5) );
@@ -122,39 +148,40 @@ int main( int argc, char** argv )
   polyobst->pushBackVertex(0, 1);
   polyobst->pushBackVertex(1, 1);
   polyobst->pushBackVertex(2, 1);
- 
+
   polyobst->finalizePolygon();
   obst_vector.emplace_back(polyobst);
   */
-  
-  for (unsigned int i=0; i<obst_vector.size(); ++i)
-  {
-    // setup callbacks for setting obstacle velocities
-    std::string topic = "/test_optim_node/obstacle_" + std::to_string(i) + "/cmd_vel";
-    obst_vel_subs.push_back(n.subscribe<geometry_msgs::Twist>(topic, 1, boost::bind(&CB_setObstacleVelocity, _1, i)));
 
-    //CreateInteractiveMarker(obst_vector.at(i)[0],obst_vector.at(i)[1],i,&marker_server, &CB_obstacle_marker);  
-    // Add interactive markers for all point obstacles
-    boost::shared_ptr<PointObstacle> pobst = boost::dynamic_pointer_cast<PointObstacle>(obst_vector.at(i));
-    if (pobst)
-    {
-      CreateInteractiveMarker(pobst->x(),pobst->y(),i, config.map_frame, &marker_server, &CB_obstacle_marker);  
-    }
-  }
+  // Louis deleted
+  // for (unsigned int i=0; i<obst_vector.size(); ++i)
+  // {
+  //   // setup callbacks for setting obstacle velocities
+  //   std::string topic = "/test_optim_node/obstacle_" + std::to_string(i) + "/cmd_vel";
+  //   obst_vel_subs.push_back(n.subscribe<geometry_msgs::Twist>(topic, 1, boost::bind(&CB_setObstacleVelocity, _1, i)));
+  //
+  //   //CreateInteractiveMarker(obst_vector.at(i)[0],obst_vector.at(i)[1],i,&marker_server, &CB_obstacle_marker);
+  //   // Add interactive markers for all point obstacles
+  //   boost::shared_ptr<PointObstacle> pobst = boost::dynamic_pointer_cast<PointObstacle>(obst_vector.at(i));
+  //   if (pobst)
+  //   {
+  //     CreateInteractiveMarker(pobst->x(),pobst->y(),i, config.map_frame, &marker_server, &CB_obstacle_marker);
+  //   }
+  // }
   marker_server.applyChanges();
-  
+
   // Setup visualization
   visual = TebVisualizationPtr(new TebVisualization(n, config));
-  
+
   // Setup robot shape model
   RobotFootprintModelPtr robot_model = TebLocalPlannerROS::getRobotFootprintFromParamServer(n);
-  
+
   // Setup planner (homotopy class planning or just the local teb planner)
   if (config.hcp.enable_homotopy_class_planning)
     planner = PlannerInterfacePtr(new HomotopyClassPlanner(config, &obst_vector, robot_model, visual, &via_points));
   else
     planner = PlannerInterfacePtr(new TebOptimalPlanner(config, &obst_vector, robot_model, visual, &via_points));
-  
+
 
   no_fixed_obstacles = obst_vector.size();
   ros::spin();
@@ -165,7 +192,33 @@ int main( int argc, char** argv )
 // Planning loop
 void CB_mainCycle(const ros::TimerEvent& e)
 {
-  planner->plan(PoseSE2(-4,0,0), PoseSE2(4,0,0)); // hardcoded start and goal for testing purposes
+  planner->plan(
+    // PoseSE2(0, 0, 0),  // x, y and theta!
+    PoseSE2(l3_origin_pose),  // x, y and theta!
+    PoseSE2(l3_goal_pose)
+  );
+}
+
+void CB_l3_goal(const geometry_msgs::PoseStampedConstPtr& pose_msg)
+{
+  // ROS_WARN("goal pose received");
+  l3_goal_pose = pose_msg->pose;
+}
+
+void CB_l3_odom(const nav_msgs::OdometryConstPtr& odom_msg)
+{
+  // ROS_WARN("odom pose received");
+  l3_origin_pose = odom_msg->pose.pose;
+}
+
+void CB_via_points(const nav_msgs::Path::ConstPtr& via_points_msg)
+{
+  ROS_INFO_ONCE("Via-points received. This message is printed once.");
+  via_points.clear();
+  for (const geometry_msgs::PoseStamped& pose : via_points_msg->poses)
+  {
+    via_points.emplace_back(pose.pose.position.x, pose.pose.position.y);
+  }
 }
 
 // Visualization loop
@@ -240,24 +293,24 @@ void CB_obstacle_marker(const visualization_msgs::InteractiveMarkerFeedbackConst
   std::stringstream ss(feedback->marker_name);
   unsigned int index;
   ss >> index;
-  
-  if (index>=no_fixed_obstacles) 
+
+  if (index>=no_fixed_obstacles)
     return;
   PointObstacle* pobst = static_cast<PointObstacle*>(obst_vector.at(index).get());
-  pobst->position() = Eigen::Vector2d(feedback->pose.position.x,feedback->pose.position.y);	  
+  pobst->position() = Eigen::Vector2d(feedback->pose.position.x,feedback->pose.position.y);
 }
 
 void CB_customObstacle(const costmap_converter::ObstacleArrayMsg::ConstPtr& obst_msg)
 {
   // resize such that the vector contains only the fixed obstacles specified inside the main function
   obst_vector.resize(no_fixed_obstacles);
-  
-  // Add custom obstacles obtained via message (assume that all obstacles coordiantes are specified in the default planning frame)  
+
+  // Add custom obstacles obtained via message (assume that all obstacles coordiantes are specified in the default planning frame)
   for (size_t i = 0; i < obst_msg->obstacles.size(); ++i)
   {
     if (obst_msg->obstacles.at(i).polygon.points.size() == 1 )
     {
-      if (obst_msg->obstacles.at(i).radius == 0) 
+      if (obst_msg->obstacles.at(i).radius == 0)
       {
         obst_vector.push_back(ObstaclePtr(new PointObstacle( obst_msg->obstacles.at(i).polygon.points.front().x,
                                                            obst_msg->obstacles.at(i).polygon.points.front().y )));
@@ -297,15 +350,6 @@ void CB_clicked_points(const geometry_msgs::PointStampedConstPtr& point_msg)
     ROS_WARN("Note, via-points are deactivated, since 'weight_via_point' <= 0");
 }
 
-void CB_via_points(const nav_msgs::Path::ConstPtr& via_points_msg)
-{
-  ROS_INFO_ONCE("Via-points received. This message is printed once.");
-  via_points.clear();
-  for (const geometry_msgs::PoseStamped& pose : via_points_msg->poses)
-  {
-    via_points.emplace_back(pose.pose.position.x, pose.pose.position.y);
-  }
-}
 
 void CB_setObstacleVelocity(const geometry_msgs::TwistConstPtr& twist_msg, const unsigned int id)
 {
