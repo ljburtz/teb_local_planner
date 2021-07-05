@@ -202,10 +202,12 @@ void TebVisualization::publishObstacles(const ObstContainer& obstacles) const
 
     marker.scale.x = 0.1;
     marker.scale.y = 0.1;
+    marker.scale.z = 0.1;
     marker.color.a = 1.0;
     marker.color.r = 1.0;
     marker.color.g = 0.0;
     marker.color.b = 0.0;
+    marker.pose.orientation.w = 1.0;
 
     teb_marker_pub_.publish( marker );
   }
@@ -276,10 +278,12 @@ void TebVisualization::publishObstacles(const ObstContainer& obstacles) const
 
       marker.scale.x = 0.1;
       marker.scale.y = 0.1;
+      marker.scale.z = 0.1;
       marker.color.a = 1.0;
       marker.color.r = 0.0;
       marker.color.g = 1.0;
       marker.color.b = 0.0;
+      marker.pose.orientation.w = 1.0;
 
       teb_marker_pub_.publish( marker );
     }
@@ -325,10 +329,12 @@ void TebVisualization::publishObstacles(const ObstContainer& obstacles) const
       }
       marker.scale.x = 0.1;
       marker.scale.y = 0.1;
+      marker.scale.z = 0.1;
       marker.color.a = 1.0;
       marker.color.r = 1.0;
       marker.color.g = 0.0;
       marker.color.b = 0.0;
+      marker.pose.orientation.w = 1.0;
 
       teb_marker_pub_.publish( marker );
     }
@@ -412,11 +418,11 @@ if ( printErrorWhenNotInitialized() )
     }
   }
   marker.scale.x = 0.01;
-  marker.pose.orientation.w = 1.0;
   marker.color.a = 1.0;
   marker.color.r = 0.5;
   marker.color.g = 1.0;
   marker.color.b = 0.0;
+  marker.pose.orientation.w = 1.0;
 
   teb_marker_pub_.publish( marker );
 }
