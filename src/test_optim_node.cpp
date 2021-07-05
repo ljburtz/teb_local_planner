@@ -89,8 +89,8 @@ int main( int argc, char** argv )
   // load ros parameters from node handle
   config.loadRosParamFromNodeHandle(n);
 
-  ros::Timer cycle_timer = n.createTimer(ros::Duration(0.05), CB_mainCycle);
-  ros::Timer publish_timer = n.createTimer(ros::Duration(0.2), CB_publishCycle);
+  ros::Timer cycle_timer = n.createTimer(ros::Duration(0.5), CB_mainCycle);
+  ros::Timer publish_timer = n.createTimer(ros::Duration(0.5), CB_publishCycle);
 
   // setup dynamic reconfigure
   dynamic_recfg = boost::make_shared< dynamic_reconfigure::Server<TebLocalPlannerReconfigureConfig> >(n);
