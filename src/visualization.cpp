@@ -203,7 +203,7 @@ void TebVisualization::publishObstacles(const ObstContainer& obstacles) const
     marker.scale.x = 0.1;
     marker.scale.y = 0.1;
     marker.scale.z = 0.1;
-    marker.color.a = 1.0;
+    marker.color.a = 0.5;
     marker.color.r = 1.0;
     marker.color.g = 0.0;
     marker.color.b = 0.0;
@@ -238,7 +238,7 @@ void TebVisualization::publishObstacles(const ObstContainer& obstacles) const
       marker.scale.x = pobst->radius();
       marker.scale.y = pobst->radius();
       marker.scale.z = 0.1;
-      marker.color.a = 1.0;
+      marker.color.a = 0.5;
       marker.color.r = 0.0;
       marker.color.g = 1.0;
       marker.color.b = 0.0;
@@ -279,7 +279,7 @@ void TebVisualization::publishObstacles(const ObstContainer& obstacles) const
       marker.scale.x = 0.1;
       marker.scale.y = 0.1;
       marker.scale.z = 0.1;
-      marker.color.a = 1.0;
+      marker.color.a = 0.5;
       marker.color.r = 0.0;
       marker.color.g = 1.0;
       marker.color.b = 0.0;
@@ -330,7 +330,7 @@ void TebVisualization::publishObstacles(const ObstContainer& obstacles) const
       marker.scale.x = 0.1;
       marker.scale.y = 0.1;
       marker.scale.z = 0.1;
-      marker.color.a = 1.0;
+      marker.color.a = 0.5;
       marker.color.r = 1.0;
       marker.color.g = 0.0;
       marker.color.b = 0.0;
@@ -367,7 +367,7 @@ void TebVisualization::publishViaPoints(const std::vector< Eigen::Vector2d, Eige
 
   marker.scale.x = 0.1;
   marker.scale.y = 0.1;
-  marker.color.a = 1.0;
+  marker.color.a = 0.5;
   marker.color.r = 0.0;
   marker.color.g = 0.0;
   marker.color.b = 1.0;
